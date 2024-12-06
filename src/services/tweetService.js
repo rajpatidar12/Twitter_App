@@ -10,14 +10,18 @@ import {
 
 // Cloudinary image upload function
 const uploadImageToCloudinary = async (image) => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader.upload(image, (error, result) => {
-      if (error) reject(error);
-      resolve(result);
-    });
-  });
+  try {
+    const result = await cloudinary.uploader.upload(image);
+    if (!result || !result.secure_url) {
+      throw new Error("Failed to upload image to Cloudinary.");
+    }
+    return result.secure_url;
+  } catch (error) {
+    throw new Error(`Cloudinary upload error: ${error.message}`);
+  }
 };
 
+// Create Tweet Service
 export const createTweet = async ({ body, image }) => {
   const filter = new Filter();
 
@@ -32,17 +36,17 @@ export const createTweet = async ({ body, image }) => {
   }
 
   try {
-    // Handle image upload to Cloudinary
+    // Upload image if provided
     let imageUrl = null;
     if (image) {
-      const uploadedImage = await uploadImageToCloudinary(image);
-      imageUrl = uploadedImage.secure_url; // Get the URL from Cloudinary
+      imageUrl = await uploadImageToCloudinary(image);
     }
 
-    // Call the repository to create the tweet with image URL if available
+    // Save tweet to repository
     const tweet = await createTweetRepository({ body, image: imageUrl });
     return tweet;
   } catch (error) {
+    console.error("Error in createTweet:", error);
     throw {
       message: "Error creating tweet",
       status: 500,
@@ -51,11 +55,13 @@ export const createTweet = async ({ body, image }) => {
   }
 };
 
+// Get All Tweets
 export const getTweets = async () => {
   try {
     const tweets = await getTweetsRepository();
     return tweets;
   } catch (error) {
+    console.error("Error in getTweets:", error);
     throw {
       message: "Error fetching tweets",
       status: 500,
@@ -64,6 +70,7 @@ export const getTweets = async () => {
   }
 };
 
+// Get Tweet By ID
 export const getTweetById = async (id) => {
   try {
     const tweet = await getTweetByIdRepository(id);
@@ -75,6 +82,7 @@ export const getTweetById = async (id) => {
     }
     return tweet;
   } catch (error) {
+    console.error("Error in getTweetById:", error);
     throw {
       message: "Error fetching tweet by ID",
       status: 500,
@@ -83,6 +91,7 @@ export const getTweetById = async (id) => {
   }
 };
 
+// Delete Tweet
 export const deleteTweet = async (id) => {
   try {
     const response = await deleteTweetRepository(id);
@@ -94,6 +103,7 @@ export const deleteTweet = async (id) => {
     }
     return response;
   } catch (error) {
+    console.error("Error in deleteTweet:", error);
     throw {
       message: "Error deleting tweet",
       status: 500,
@@ -102,6 +112,7 @@ export const deleteTweet = async (id) => {
   }
 };
 
+// Update Tweet
 export const updateTweet = async (id, body) => {
   const filter = new Filter();
 
@@ -123,6 +134,7 @@ export const updateTweet = async (id, body) => {
     }
     return response;
   } catch (error) {
+    console.error("Error in updateTweet:", error);
     throw {
       message: "Error updating tweet",
       status: 500,

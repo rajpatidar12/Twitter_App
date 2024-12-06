@@ -9,23 +9,31 @@ import {
 import { errorResponse, successResponse } from "../utils/responses.js";
 import cloudinary from "cloudinary";
 
-// Cloudinary image upload function
 const uploadImageToCloudinary = async (image) => {
   return new Promise((resolve, reject) => {
-    cloudinary.uploader.upload(image, (error, result) => {
-      if (error) reject(error);
-      resolve(result);
-    });
+    cloudinary.uploader.upload(
+      image,
+      { resource_type: "auto", folder: "tweets" }, // Specify the folder in Cloudinary
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
   });
 };
 
 export const createTweet = async (req, res) => {
   try {
-    // Handle file upload if provided
     let imageUrl = null;
+
     if (req.file) {
+      // Local file upload
       const uploadedImage = await uploadImageToCloudinary(req.file.path);
-      imageUrl = uploadedImage.secure_url; // Get the URL of the uploaded image
+      imageUrl = uploadedImage.secure_url;
+    } else if (req.body.image) {
+      // Remote URL upload
+      const uploadedImage = await uploadImageToCloudinary(req.body.image);
+      imageUrl = uploadedImage.secure_url;
     }
 
     const response = await createTweetService({
@@ -40,6 +48,7 @@ export const createTweet = async (req, res) => {
       res
     );
   } catch (error) {
+    console.error("Error uploading image:", error);
     return errorResponse(error, res);
   }
 };
