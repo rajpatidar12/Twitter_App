@@ -4,7 +4,7 @@ import cloudinary from "./cloudinaryConfig.js"; // Import your centralized Cloud
 
 // Set up the Cloudinary storage
 const storage = new CloudinaryStorage({
-  cloudinary,
+  cloudinary, // Using the imported cloudinary instance from your config
   params: async (req, file) => {
     const fileName = `${Date.now()}-${file.originalname}`.replace(/\s/g, "_"); // Sanitize file name
     return {
@@ -21,4 +21,4 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // Limit files to 5 MB
 });
 
-export default upload;
+export default upload; // Export multer instance for use in your routes

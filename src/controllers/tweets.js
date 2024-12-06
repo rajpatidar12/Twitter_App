@@ -13,10 +13,13 @@ const uploadImageToCloudinary = async (image) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload(
       image,
-      { resource_type: "auto", folder: "tweets" }, // Specify the folder in Cloudinary
+      { resource_type: "auto", folder: "tweets" }, // Cloudinary folder for uploaded images
       (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
       }
     );
   });
@@ -26,20 +29,24 @@ export const createTweet = async (req, res) => {
   try {
     let imageUrl = null;
 
+    // Check if there is an image in the request
     if (req.file) {
-      // Local file upload
-      const uploadedImage = await uploadImageToCloudinary(req.file.path);
-      imageUrl = uploadedImage.secure_url;
-    } else if (req.body.image) {
-      // Remote URL upload
-      const uploadedImage = await uploadImageToCloudinary(req.body.image);
-      imageUrl = uploadedImage.secure_url;
+      console.log("Received file:", req.file); // Check that file is received
+      imageUrl = req.file.path; // Cloudinary URL (make sure it's not null)
+      console.log("Image URL:", imageUrl); // Log image URL for debugging
     }
 
-    const response = await createTweetService({
-      body: req.body.body,
-      image: imageUrl,
-    });
+    // Prepare the tweet data
+    const tweetData = {
+      body: req.body.body, // Tweet text
+      image: imageUrl, // Image URL (if any)
+    };
+
+    console.log("Tweet data to be saved:", tweetData); // Log the data being sent to the DB
+
+    // Create the tweet
+    const response = await createTweetService(tweetData);
+    console.log("Tweet created successfully:", response); // Log success
 
     return successResponse(
       response,
@@ -48,7 +55,7 @@ export const createTweet = async (req, res) => {
       res
     );
   } catch (error) {
-    console.error("Error uploading image:", error);
+    console.error("Error creating tweet:", error); // Log error
     return errorResponse(error, res);
   }
 };

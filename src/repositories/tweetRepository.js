@@ -1,16 +1,53 @@
 import Tweet from "../schema/tweet.js";
+import cloudinary from "cloudinary";
 
-// Create Tweet
-export const createTweet = async ({ body, image }) => {
+// Cloudinary image upload function
+const uploadImageToCloudinary = async (image) => {
   try {
-    return await Tweet.create({ body, image });
+    const result = await cloudinary.uploader.upload(image);
+    if (!result || !result.secure_url) {
+      throw new Error("Failed to upload image to Cloudinary.");
+    }
+    return result.secure_url;
   } catch (error) {
-    console.error("Error creating tweet:", error.message);
-    throw new Error("Database error: Unable to create tweet.");
+    throw new Error(`Cloudinary upload error: ${error.message}`);
   }
 };
 
-// Get All Tweets
+// Create Tweet Repository
+export const createTweet = async ({ body, image }) => {
+  try {
+    console.log("Saving tweet:", { body, image }); // Log tweet data before save
+
+    // Handle image upload if provided
+    let imageUrl = null;
+    if (image) {
+      console.log("Uploading image to Cloudinary...");
+      imageUrl = await uploadImageToCloudinary(image);
+      console.log("Image uploaded successfully:", imageUrl);
+    }
+
+    // Save tweet to the database with image URL if available
+    const tweet = await Tweet.create({ body, image: imageUrl });
+    console.log("Tweet created successfully:", tweet);
+
+    // Returning tweet object with image details (if available)
+    return {
+      body: tweet.body,
+      image: tweet.image
+        ? {
+            url: tweet.image,
+            public_id: tweet.image.split("/").pop().split(".")[0], // Extracting the image public_id
+          }
+        : null,
+    };
+  } catch (error) {
+    console.error("Error saving tweet:", error);
+    throw error;
+  }
+};
+
+// Get All Tweets Repository
 export const getTweets = async () => {
   try {
     return await Tweet.find().sort({ createdAt: -1 }); // Sort by latest tweets
@@ -20,7 +57,7 @@ export const getTweets = async () => {
   }
 };
 
-// Get Tweet By ID
+// Get Tweet By ID Repository
 export const getTweetById = async (tweetId) => {
   try {
     const tweet = await Tweet.findById(tweetId);
@@ -34,7 +71,7 @@ export const getTweetById = async (tweetId) => {
   }
 };
 
-// Delete Tweet
+// Delete Tweet Repository
 export const deleteTweet = async (tweetId) => {
   try {
     const tweet = await Tweet.findByIdAndDelete(tweetId);
@@ -48,7 +85,7 @@ export const deleteTweet = async (tweetId) => {
   }
 };
 
-// Update Tweet
+// Update Tweet Repository
 export const updateTweet = async (tweetId, body) => {
   try {
     const tweet = await Tweet.findByIdAndUpdate(
